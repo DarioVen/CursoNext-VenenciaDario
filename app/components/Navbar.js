@@ -3,20 +3,17 @@ import Image from 'next/image';
 
 export default function Navbar() {
   return (
-    <header className="navbar">
-      <div className="container navbar-container">
-        <div className="navbar-brand">
-          <Link href="/">
-            <Image 
-              src="/logo.png" 
-              alt="Logo Tienda" 
-              width={120} 
-              height={40}
-              className="logo"
-            />
-          </Link>
-        </div>
-        
+    <nav className="navbar">
+      <div className="navbar-container container">
+        <Link href="/" className="logo-link">
+          <Image 
+            src="/images/logo.jfif"
+            alt="Logo"
+            width={150}
+            height={50}
+            className="logo-image"
+          />
+        </Link>
         <nav className="navbar-menu">
           <ul className="navbar-links">
             <li>
@@ -47,6 +44,6 @@ export default function Navbar() {
           </Link>
         </div>
       </div>
-    </header>
+    </nav>
   );
 }

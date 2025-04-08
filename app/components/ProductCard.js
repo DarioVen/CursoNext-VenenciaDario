@@ -1,7 +1,28 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
+import { addToCart } from '../firebase/cartUtils';
 
 export default function ProductCard({ product }) {
+  const [loading, setLoading] = useState(false);
+  // Temporary userId - You'll need to implement authentication
+  const userId = 'testUser';
+
+  const handleAddToCart = async () => {
+    setLoading(true);
+    try {
+      await addToCart(userId, product);
+      alert('Producto agregado al carrito');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      alert('Error al agregar al carrito');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="product-card">
       <Link href={`/productos/${product.id}`}>
@@ -32,9 +53,13 @@ export default function ProductCard({ product }) {
           </div>
         </div>
       </Link>
-      
-      <button className="btn-primary add-to-cart">
-        Agregar al carrito
+
+      <button 
+        className="btn-primary add-to-cart"
+        onClick={handleAddToCart}
+        disabled={loading}
+      >
+        {loading ? 'Agregando...' : 'Agregar al carrito'}
       </button>
     </div>
   );

@@ -1,9 +1,40 @@
-import Image from 'next/image';
-import Counter from './Counter';
+'use client';
 
-export default function CartItem({ item }) {
+import Image from 'next/image';
+import { useState } from 'react';
+import Counter from './Counter';
+import { updateCartItem, removeFromCart, getCart } from '../firebase/cartUtils';
+
+export default function CartItem({ item, userId, onUpdate }) {
+  const [loading, setLoading] = useState(false);
   const total = item.price * item.quantity;
-  
+
+  const handleQuantityChange = async (newQuantity) => {
+    setLoading(true);
+    try {
+      await updateCartItem(userId, item.productId, newQuantity);
+      const updatedCart = await getCart(userId);
+      onUpdate(updatedCart.items);
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    setLoading(true);
+    try {
+      await removeFromCart(userId, item.productId);
+      const updatedCart = await getCart(userId);
+      onUpdate(updatedCart.items);
+    } catch (error) {
+      console.error('Error removing item:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="cart-item">
       <div className="cart-item-image">
@@ -22,14 +53,22 @@ export default function CartItem({ item }) {
       </div>
       
       <div className="cart-item-quantity">
-        <Counter initialValue={item.quantity} />
+        <Counter 
+          initialValue={item.quantity}
+          onChange={handleQuantityChange}
+          disabled={loading}
+        />
       </div>
       
       <div className="cart-item-total">
         <p>${total.toFixed(2)}</p>
       </div>
       
-      <button className="btn-remove">
+      <button 
+        className="btn-remove"
+        onClick={handleRemove}
+        disabled={loading}
+      >
         <i className="icon-trash">🗑️</i>
       </button>
     </div>
