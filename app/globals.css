@@ -355,6 +355,40 @@ button {
   margin-bottom: 20px;
 }
 
+.product-img-thumbnail {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.product-img-thumbnail.active {
+  border: 2px solid #007bff;
+}
+
+.variants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.variant-item {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.variant-name {
+  font-weight: bold;
+}
+
+.variant-stock {
+  color: #666;
+  font-size: 0.9rem;
+}
+
 /* Cart styles */
 .cart-page h1 {
   margin-bottom: 30px;

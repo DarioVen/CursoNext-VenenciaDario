@@ -1,15 +1,17 @@
 'use client';
-
+import React from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { uploadProductsOneByOne, uploadProductsInBatch } from '../firebase/config';
 import { getAllProducts } from '../firebase/firebaseUtils';
 import './admin.css';
+import { updateProductStock } from '../firebase/firebaseUtils';
 
 export default function AdminPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [editingStock, setEditingStock] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -46,7 +48,39 @@ export default function AdminPage() {
       setLoading(false);
     }
   };
-  
+
+  const handleStockUpdate = async (productId, newStock, variantId = null) => {
+    try {
+      setLoading(true);
+      await updateProductStock(productId, newStock, variantId);
+      
+      // Update local state
+      setProducts(products.map(product => {
+        if (product.id === productId) {
+          if (variantId) {
+            return {
+              ...product,
+              variants: product.variants?.map(variant => 
+                variant.id === variantId 
+                  ? { ...variant, stock: newStock }
+                  : variant
+              )
+            };
+          }
+          return { ...product, stock: newStock };
+        }
+        return product;
+      }));
+      
+      setEditingStock(null);
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      setError('Error al actualizar el stock');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="admin-page">
       <h1>Panel de Administración</h1>
@@ -116,26 +150,101 @@ export default function AdminPage() {
           </thead>
           <tbody>
             {products.map(product => (
-              <tr key={product.id}>
-                <td>{product.id}</td>
-                <td>
-                  <Image 
-                    src={product.image} 
-                    alt={product.name} 
-                    width={50} 
-                    height={50}
-                    className="admin-product-img" 
-                  />
-                </td>
-                <td>{product.name}</td>
-                <td>{product.category}</td>
-                <td>${product.price.toFixed(2)}</td>
-                <td>{product.stock}</td>
-                <td className="admin-actions">
-                  <button className="btn-edit">Editar</button>
-                  <button className="btn-delete">Eliminar</button>
-                </td>
-              </tr>
+              <React.Fragment key={product.id}>
+                <tr>
+                  <td>{product.id}</td>
+                  <td>
+                    <Image 
+                      src={product.image} 
+                      alt={product.name} 
+                      width={50} 
+                      height={50}
+                      className="admin-product-img" 
+                    />
+                  </td>
+                  <td>{product.name}</td>
+                  <td>{product.category}</td>
+                  <td>${product.price.toFixed(2)}</td>
+                  <td>
+                    {editingStock === product.id ? (
+                      <div className="stock-editor">
+                        <input
+                          type="number"
+                          min="0"
+                          defaultValue={product.stock}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleStockUpdate(product.id, parseInt(e.target.value));
+                            }
+                          }}
+                        />
+                        <button 
+                          className="btn-save"
+                          onClick={() => setEditingStock(null)}
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    ) : (
+                      <span onClick={() => setEditingStock(product.id)}>
+                        {product.stock}
+                      </span>
+                    )}
+                  </td>
+                  <td className="admin-actions">
+                    <button className="btn-edit">Editar</button>
+                    <button className="btn-delete">Eliminar</button>
+                  </td>
+                </tr>
+                {product.variants && (
+                  <tr key={`${product.id}-variants`}>
+                    <td colSpan="7">
+                      <div className="variants-table">
+                        <h4>Variantes</h4>
+                        {product.variants.map(variant => (
+                          <div key={`${product.id}-${variant.id}`} className="variant-item">
+                            <span>{variant.name}</span>
+                            <div className="variant-stock">
+                              {editingStock === `${product.id}-${variant.id}` ? (
+                                <div className="stock-editor">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    defaultValue={variant.stock}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        handleStockUpdate(
+                                          product.id,
+                                          parseInt(e.target.value),
+                                          variant.id
+                                        );
+                                      }
+                                    }}
+                                  />
+                                  <button 
+                                    className="btn-save"
+                                    onClick={() => setEditingStock(null)}
+                                  >
+                                    ✓
+                                  </button>
+                                </div>
+                              ) : (
+                                <span 
+                                  onClick={() => 
+                                    setEditingStock(`${product.id}-${variant.id}`)
+                                  }
+                                >
+                                  Stock: {variant.stock}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

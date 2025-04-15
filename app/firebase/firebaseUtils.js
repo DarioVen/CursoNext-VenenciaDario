@@ -1,5 +1,5 @@
+import { doc, updateDoc, getDoc, getDocs, collection, query, where, limit } from 'firebase/firestore';
 import { db } from './config';
-import { collection, getDocs, doc, getDoc, query, where, limit } from 'firebase/firestore';
 
 export async function getAllProducts() {
   const querySnapshot = await getDocs(collection(db, "products"));
@@ -59,3 +59,30 @@ export async function getRelatedProducts(category, currentProductId) {
     ...doc.data()
   }));
 }
+
+export const updateProductStock = async (productId, newStock, variantId = null) => {
+  const productRef = doc(db, 'products', productId);
+  
+  try {
+    if (variantId) {
+      // Update variant stock
+      const productDoc = await getDoc(productRef);
+      const productData = productDoc.data();
+      const updatedVariants = productData.variants.map(variant =>
+        variant.id === variantId ? { ...variant, stock: newStock } : variant
+      );
+      
+      await updateDoc(productRef, {
+        variants: updatedVariants
+      });
+    } else {
+      
+      await updateDoc(productRef, {
+        stock: newStock
+      });
+    }
+  } catch (error) {
+    console.error('Error updating stock:', error);
+    throw error;
+  }
+};

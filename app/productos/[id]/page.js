@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import { getProductById, getRelatedProducts } from '../../firebase/firebaseUtils';
 import ProductDetail from '../../components/ProductDetail';
 import ProductSlider from '../../components/ProductSlider';
@@ -8,12 +9,18 @@ import Counter from '../../components/Counter';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { addToCart } from '../../firebase/cartUtils';
+import { use } from 'react';
 
 export default function ProductDetailPage({ params }) {
-  const { id } = params;
+  const { id } = params;  
+  
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [quantity, setQuantity] = useState(1);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const userId = 'testUser';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -24,6 +31,9 @@ export default function ProductDetailPage({ params }) {
           return;
         }
         setProduct(productData);
+        if (productData.variants && productData.variants.length > 0) {
+          setSelectedVariant(productData.variants[0]);
+        }
         
         const related = await getRelatedProducts(productData.category, id);
         setRelatedProducts(related);
@@ -37,6 +47,51 @@ export default function ProductDetailPage({ params }) {
     fetchData();
   }, [id]);
 
+  const handleAddToCart = async () => {
+    // Check stock availability
+    const currentStock = product.variants?.length > 0 ? selectedVariant?.stock : product.stock;
+    
+    if (!currentStock || currentStock < quantity) {
+      await Swal.fire({
+        title: 'Error',
+        text: 'No hay suficiente stock disponible',
+        icon: 'error',
+        confirmButtonText: 'Ok'
+      });
+      return;
+    }
+
+    setAddingToCart(true);
+    try {
+      const productToAdd = {
+        ...product,
+        variant: product.variants?.length > 0 ? selectedVariant : null,
+      };
+      
+      await addToCart(userId, productToAdd, quantity);
+      
+      await Swal.fire({
+        title: '¡Producto agregado!',
+        text: `${product.name} se ha agregado al carrito`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        position: 'top-end',
+        toast: true
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      await Swal.fire({
+        title: 'Error',
+        text: 'No se pudo agregar el producto al carrito',
+        icon: 'error',
+        confirmButtonText: 'Ok'
+      });
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -44,23 +99,6 @@ export default function ProductDetailPage({ params }) {
   if (!product) {
     return notFound();
   }
-
-  const [quantity, setQuantity] = useState(1);
-  const [addingToCart, setAddingToCart] = useState(false);
-  const userId = 'testUser'; // Temporary userId
-
-  const handleAddToCart = async () => {
-    setAddingToCart(true);
-    try {
-      await addToCart(userId, product, quantity);
-      alert('Producto agregado al carrito');
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      alert('Error al agregar al carrito');
-    } finally {
-      setAddingToCart(false);
-    }
-  };
 
   return (
     <div className="product-detail-page">
@@ -83,19 +121,47 @@ export default function ProductDetailPage({ params }) {
             )}
           </div>
           
+          {product?.variants && (
+            <div className="variant-selector">
+              <label>Variantes:</label>
+              <select 
+                value={selectedVariant?.id} 
+                onChange={(e) => {
+                  const variant = product.variants.find(v => v.id === e.target.value);
+                  setSelectedVariant(variant);
+                }}
+              >
+                {product.variants.map(variant => (
+                  <option key={variant.id} value={variant.id}>
+                    {variant.name} - Stock: {variant.stock}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="quantity-selector">
             <span>Cantidad:</span>
             <Counter 
               initialValue={1} 
               onChange={setQuantity}
               disabled={addingToCart}
+              max={selectedVariant?.stock || 0}
             />
+            <span className="stock-info">
+              Stock disponible: {selectedVariant?.stock || 0}
+            </span>
           </div>
           
           <button 
             className="btn-primary add-to-cart"
             onClick={handleAddToCart}
-            disabled={addingToCart}
+            disabled={
+              addingToCart || 
+              (product?.variants?.length > 0 
+                ? (!selectedVariant || selectedVariant.stock < quantity)
+                : !product?.stock || product.stock < quantity)
+            }
           >
             {addingToCart ? 'Agregando...' : 'Agregar al carrito'}
           </button>

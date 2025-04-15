@@ -1,65 +1,84 @@
+import { doc, updateDoc, getDoc, setDoc, arrayUnion } from 'firebase/firestore';
 import { db } from './config';
-import { collection, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-export async function getCart(userId) {
-  const cartDoc = await getDoc(doc(db, 'carts', userId));
-  return cartDoc.exists() ? cartDoc.data() : { items: [] };
-}
+export const addToCart = async (userId, product, quantity = 1) => {
+  try {
+    const cartRef = doc(db, 'carts', userId);
+    const cartDoc = await getDoc(cartRef);
 
-export async function addToCart(userId, product, quantity = 1) {
-  const cartRef = doc(db, 'carts', userId);
-  const cartDoc = await getDoc(cartRef);
-  
-  if (!cartDoc.exists()) {
-    await setDoc(cartRef, {
-      items: [{
-        productId: product.id,
-        quantity,
-        price: product.price,
-        name: product.name,
-        image: product.image
-      }]
-    });
-  } else {
-    const cart = cartDoc.data();
-    const existingItem = cart.items.find(item => item.productId === product.id);
-    
-    if (existingItem) {
-      existingItem.quantity += quantity;
-      await updateDoc(cartRef, { items: cart.items });
-    } else {
-      cart.items.push({
-        productId: product.id,
-        quantity,
-        price: product.price,
-        name: product.name,
-        image: product.image
+    const cartItem = {
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: quantity,
+      image: product.image,
+      variantId: product.variant?.id || null,
+      variantName: product.variant?.name || null,
+      timestamp: new Date().toISOString()
+    };
+
+    if (!cartDoc.exists()) {
+      await setDoc(cartRef, {
+        userId: userId,
+        items: [cartItem]
       });
-      await updateDoc(cartRef, { items: cart.items });
+    } else {
+      const cartData = cartDoc.data();
+      const existingItemIndex = cartData.items.findIndex(item => 
+        item.productId === product.id && 
+        item.variantId === cartItem.variantId
+      );
+
+      if (existingItemIndex >= 0) {
+        const updatedItems = [...cartData.items];
+        updatedItems[existingItemIndex].quantity += quantity;
+        await updateDoc(cartRef, {
+          items: updatedItems
+        });
+      } else {
+        await updateDoc(cartRef, {
+          items: [...cartData.items, cartItem]
+        });
+      }
     }
+    return true;
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    throw error;
   }
-}
+};
 
-export async function updateCartItem(userId, productId, quantity) {
-  const cartRef = doc(db, 'carts', userId);
-  const cartDoc = await getDoc(cartRef);
-  
-  if (cartDoc.exists()) {
-    const cart = cartDoc.data();
-    const items = cart.items.map(item => 
-      item.productId === productId ? { ...item, quantity } : item
-    );
-    await updateDoc(cartRef, { items });
+export const getCart = async (userId) => {
+  try {
+    const cartRef = doc(db, 'carts', userId);
+    const cartDoc = await getDoc(cartRef);
+    
+    if (cartDoc.exists()) {
+      return cartDoc.data();
+    } else {
+      return { items: [] };
+    }
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    throw error;
   }
-}
+};
 
-export async function removeFromCart(userId, productId) {
-  const cartRef = doc(db, 'carts', userId);
-  const cartDoc = await getDoc(cartRef);
-  
-  if (cartDoc.exists()) {
-    const cart = cartDoc.data();
-    const items = cart.items.filter(item => item.productId !== productId);
-    await updateDoc(cartRef, { items });
+export const removeFromCart = async (userId, productId) => {
+  try {
+    const cartRef = doc(db, 'carts', userId);
+    const cartDoc = await getDoc(cartRef);
+    
+    if (cartDoc.exists()) {
+      const cartData = cartDoc.data();
+      const updatedItems = cartData.items.filter(item => item.productId !== productId);
+      
+      await updateDoc(cartRef, {
+        items: updatedItems
+      });
+    }
+  } catch (error) {
+    console.error('Error removing item from cart:', error);
+    throw error;
   }
-}
+};
