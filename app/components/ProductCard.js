@@ -4,20 +4,44 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import { addToCart } from '../firebase/cartUtils';
+import { getAuth } from 'firebase/auth';
+import Swal from 'sweetalert2';
 
 export default function ProductCard({ product }) {
+  const auth = getAuth();
   const [loading, setLoading] = useState(false);
-  // Temporary userId - You'll need to implement authentication
-  const userId = 'testUser';
 
   const handleAddToCart = async () => {
+    if (!auth.currentUser) {
+      await Swal.fire({
+        title: 'Error',
+        text: 'Debes iniciar sesión para agregar productos al carrito',
+        icon: 'error',
+        confirmButtonText: 'Ok'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      await addToCart(userId, product);
-      alert('Producto agregado al carrito');
+      await addToCart(auth.currentUser.uid, product);
+      await Swal.fire({
+        title: '¡Producto agregado!',
+        text: `${product.name} se ha agregado al carrito`,
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false,
+        position: 'top-end',
+        toast: true
+      });
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('Error al agregar al carrito');
+      await Swal.fire({
+        title: 'Error',
+        text: 'No se pudo agregar el producto al carrito',
+        icon: 'error',
+        confirmButtonText: 'Ok'
+      });
     } finally {
       setLoading(false);
     }
@@ -25,7 +49,7 @@ export default function ProductCard({ product }) {
 
   return (
     <div className="product-card">
-      <Link href={`/productos/${product.id}`}>
+      <Link href={`/productos/${product.id}`} className="product-link">
         <div className="product-image">
           <Image 
             src={product.image} 
@@ -34,28 +58,19 @@ export default function ProductCard({ product }) {
             height={300}
             className="product-img"
           />
-          {product.discount > 0 && (
-            <span className="discount-badge">-{product.discount}%</span>
-          )}
         </div>
         
         <div className="product-info">
           <h3 className="product-name">{product.name}</h3>
           <p className="product-category">{product.category}</p>
-          
           <div className="product-price">
             <span className="price">${product.price.toFixed(2)}</span>
-            {product.discount > 0 && (
-              <span className="original-price">
-                ${(product.price / (1 - product.discount / 100)).toFixed(2)}
-              </span>
-            )}
           </div>
         </div>
       </Link>
-
+      
       <button 
-        className="btn-primary add-to-cart"
+        className="btn-add-to-cart"
         onClick={handleAddToCart}
         disabled={loading}
       >

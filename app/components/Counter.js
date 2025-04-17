@@ -1,28 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export default function Counter({ initialValue = 1, min = 1, max = 10 }) {
+export default function Counter({ initialValue = 1, min = 1, max = 10, onChange, disabled }) {
   const [count, setCount] = useState(initialValue);
   
   const increment = () => {
     if (count < max) {
-      setCount(count + 1);
+      const newCount = count + 1;
+      setCount(newCount);
+      onChange(newCount);
     }
   };
   
   const decrement = () => {
     if (count > min) {
-      setCount(count - 1);
+      const newCount = count - 1;
+      setCount(newCount);
+      onChange(newCount);
     }
   };
   
+  useEffect(() => {
+    setCount(initialValue);
+  }, [initialValue]);
+
   return (
     <div className="counter">
       <button 
         className="counter-btn decrement" 
         onClick={decrement}
-        disabled={count <= min}
+        disabled={disabled || count <= min}
       >
         -
       </button>
@@ -39,7 +47,7 @@ export default function Counter({ initialValue = 1, min = 1, max = 10 }) {
       <button 
         className="counter-btn increment" 
         onClick={increment}
-        disabled={count >= max}
+        disabled={disabled || count >= max}
       >
         +
       </button>

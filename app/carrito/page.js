@@ -4,32 +4,47 @@ import { useState, useEffect } from 'react';
 import CartItem from '../components/CartItem';
 import Link from 'next/link';
 import { getCart } from '../firebase/cartUtils';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import './cart.css';
 
 export default function CartPage() {
+  const auth = getAuth();
+  const router = useRouter();
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Temporary userId - You'll need to implement authentication
-  const userId = 'testUser';
 
   useEffect(() => {
-    const fetchCart = async () => {
-      try {
-        const cart = await getCart(userId);
-        setCartItems(cart.items || []);
-      } catch (error) {
-        console.error('Error fetching cart:', error);
-      } finally {
-        setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push('/login');
+        return;
       }
-    };
 
-    fetchCart();
-  }, []);
+      const fetchCart = async () => {
+        try {
+          const cart = await getCart(user.uid);
+          setCartItems(cart.items || []);
+        } catch (error) {
+          console.error('Error fetching cart:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 0 ? 10 : 0;
-  const total = subtotal + shipping;
+      fetchCart();
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleCartUpdate = (updatedItems) => {
+    const itemsWithTotals = updatedItems.map(item => ({
+      ...item,
+      total: parseFloat((item.price * item.quantity).toFixed(2))
+    }));
+    setCartItems(itemsWithTotals);
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -51,10 +66,9 @@ export default function CartPage() {
           <div className="cart-items">
             {cartItems.map(item => (
               <CartItem 
-                key={item.productId} 
+                key={`${item.productId}-${item.quantity}`}
                 item={item}
-                userId={userId}
-                onUpdate={setCartItems}
+                onUpdate={handleCartUpdate}
               />
             ))}
           </div>

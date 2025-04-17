@@ -1,83 +1,77 @@
 'use client';
-import React from 'react';
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { checkAdminRole } from '../firebase/adminUtils';
+import { getAllProducts, updateProductStock } from '../firebase/firebaseUtils';
+
 import Image from 'next/image';
-import { uploadProductsOneByOne, uploadProductsInBatch } from '../firebase/config';
-import { getAllProducts } from '../firebase/firebaseUtils';
-import './admin.css';
-import { updateProductStock } from '../firebase/firebaseUtils';
+import Swal from 'sweetalert2';
+import ProductForm from '../components/ProductForm';
 
 export default function AdminPage() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [editingStock, setEditingStock] = useState(null);
-  const [result, setResult] = useState(null);
+
   const [error, setError] = useState(null);
+  const router = useRouter();
+  const auth = getAuth();
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+      const adminStatus = await checkAdminRole(user.uid);
+      if (!adminStatus) {
+        Swal.fire({
+          title: 'Acceso denegado',
+          text: 'No tienes permisos de administrador',
+          icon: 'error',
+          confirmButtonText: 'Ok'
+        }).then(() => {
+          router.push('/');
+        });
+        return;
+      }
+
+      setIsAdmin(true);
       try {
         const productsData = await getAllProducts();
         setProducts(productsData);
       } catch (err) {
         console.error('Error fetching products:', err);
         setError(err.message);
+      } finally {
+        setLoading(false);
       }
-    };
+    });
 
-    fetchProducts();
-  }, []);
+    return () => unsubscribe();
+  }, [router]);
 
-  const handleUpload = async (method) => {
-    setLoading(true);
-    setResult(null);
-    setError(null);
-    
+  // Remove handleUpload function as it's no longer needed
+
+  // Add this function to handle product updates
+  const handleProductAdded = async () => {
     try {
-      if (method === 'one-by-one') {
-        await uploadProductsOneByOne();
-      } else {
-        await uploadProductsInBatch();
-      }
-      setResult('Productos cargados correctamente');
+      const productsData = await getAllProducts();
+      setProducts(productsData);
+      Swal.fire({
+        title: '¡Éxito!',
+        text: 'Producto agregado correctamente',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false
+      });
     } catch (err) {
-      console.error('Error al cargar productos:', err);
+      console.error('Error refreshing products:', err);
       setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStockUpdate = async (productId, newStock, variantId = null) => {
-    try {
-      setLoading(true);
-      await updateProductStock(productId, newStock, variantId);
-      
-      // Update local state
-      setProducts(products.map(product => {
-        if (product.id === productId) {
-          if (variantId) {
-            return {
-              ...product,
-              variants: product.variants?.map(variant => 
-                variant.id === variantId 
-                  ? { ...variant, stock: newStock }
-                  : variant
-              )
-            };
-          }
-          return { ...product, stock: newStock };
-        }
-        return product;
-      }));
-      
-      setEditingStock(null);
-    } catch (error) {
-      console.error('Error updating stock:', error);
-      setError('Error al actualizar el stock');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -85,56 +79,11 @@ export default function AdminPage() {
     <div className="admin-page">
       <h1>Panel de Administración</h1>
       
-      <div className="admin-upload-section">
-        <h2>Cargar Productos a Firebase</h2>
-        <p>Utiliza uno de estos botones para cargar los productos de muestra a tu base de datos:</p>
-        
-        <div className="upload-buttons">
-          <button 
-            className="btn-primary" 
-            onClick={() => handleUpload('batch')}
-            disabled={loading}
-          >
-            {loading ? 'Cargando...' : 'Cargar Productos en Lote'}
-          </button>
-          
-          <button 
-            className="btn-secondary" 
-            onClick={() => handleUpload('one-by-one')}
-            disabled={loading}
-          >
-            {loading ? 'Cargando...' : 'Cargar Productos Uno por Uno'}
-          </button>
-        </div>
-        
-        {result && (
-          <div className="upload-success">
-            <p>{result}</p>
-          </div>
-        )}
-        
-        {error && (
-          <div className="upload-error">
-            <p>Error: {error}</p>
-          </div>
-        )}
+      <div className="admin-section">
+        <h2>Agregar Nuevo Producto</h2>
+        <ProductForm onSuccess={handleProductAdded} />
       </div>
 
-      <div className="admin-header">
-        <button className="btn-primary">
-          Agregar nuevo producto
-        </button>
-        
-        <div className="search-box">
-          <input 
-            type="text" 
-            placeholder="Buscar productos..." 
-            className="admin-search"
-          />
-          <button className="btn-search">Buscar</button>
-        </div>
-      </div>
-      
       <div className="admin-table-container">
         <table className="admin-table">
           <thead>

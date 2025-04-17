@@ -1,48 +1,18 @@
 import Image from 'next/image';
-import { useState } from 'react';
 
 export default function ProductDetail({ product }) {
-  const [currentImage, setCurrentImage] = useState(product.image);
-
-  const handleImageClick = (img) => {
-    setCurrentImage(img);
-  };
-
   return (
     <div className="product-detail">
       <div className="product-images">
         <div className="main-image">
           <Image 
-            src={currentImage} 
+            src={product.image} 
             alt={product.name} 
             width={500} 
             height={500}
             className="product-img-main"
             priority
           />
-        </div>
-        
-        <div className="thumbnail-images">
-          <div className="thumbnail" onClick={() => handleImageClick(product.image)}>
-            <Image 
-              src={product.image} 
-              alt={product.name} 
-              width={80} 
-              height={80}
-              className={`product-img-thumbnail ${currentImage === product.image ? 'active' : ''}`}
-            />
-          </div>
-          {product.gallery?.map((img, index) => (
-            <div key={index} className="thumbnail" onClick={() => handleImageClick(img)}>
-              <Image 
-                src={img} 
-                alt={`${product.name} ${index + 1}`} 
-                width={80} 
-                height={80}
-                className={`product-img-thumbnail ${currentImage === img ? 'active' : ''}`}
-              />
-            </div>
-          ))}
         </div>
       </div>
       

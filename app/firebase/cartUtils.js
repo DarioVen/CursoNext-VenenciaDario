@@ -82,3 +82,26 @@ export const removeFromCart = async (userId, productId) => {
     throw error;
   }
 };
+
+export const updateCartItem = async (userId, productId, newQuantity) => {
+  try {
+    const cartRef = doc(db, 'carts', userId);
+    const cartDoc = await getDoc(cartRef);
+    
+    if (cartDoc.exists()) {
+      const cartData = cartDoc.data();
+      const updatedItems = cartData.items.map(item => 
+        item.productId === productId 
+          ? { ...item, quantity: newQuantity }
+          : item
+      );
+      
+      await updateDoc(cartRef, {
+        items: updatedItems
+      });
+    }
+  } catch (error) {
+    console.error('Error updating cart item:', error);
+    throw error;
+  }
+};
