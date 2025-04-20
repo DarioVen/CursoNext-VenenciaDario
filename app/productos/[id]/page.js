@@ -6,14 +6,13 @@ import ProductDetail from '../../components/ProductDetail';
 import { notFound } from 'next/navigation';
 
 export default function ProductDetailPage({ params }) {
-  const { id } = params;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const productData = await getProductById(id);
+        const productData = await getProductById(params.id);
         if (!productData) {
           notFound();
           return;
@@ -27,7 +26,7 @@ export default function ProductDetailPage({ params }) {
     };
 
     fetchProduct();
-  }, [id]);
+  }, [params.id]);
 
   if (loading) {
     return <div>Loading...</div>;
