@@ -55,9 +55,6 @@ export default function AdminPage() {
     return () => unsubscribe();
   }, [router]);
 
-  // Remove handleUpload function as it's no longer needed
-
-  // Add this function to handle product updates
   const handleProductAdded = async () => {
     try {
       const productsData = await getAllProducts();

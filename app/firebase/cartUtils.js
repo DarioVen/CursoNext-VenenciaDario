@@ -105,3 +105,13 @@ export const updateCartItem = async (userId, productId, newQuantity) => {
     throw error;
   }
 };
+
+export const clearCart = async (userId) => {
+  try {
+    const cartRef = doc(db, 'carts', userId);
+    await setDoc(cartRef, { items: [] });
+  } catch (error) {
+    console.error('Error clearing cart:', error);
+    throw error;
+  }
+};

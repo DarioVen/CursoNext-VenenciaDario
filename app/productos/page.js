@@ -30,12 +30,10 @@ export default function ProductsPage() {
   useEffect(() => {
     let result = [...products];
 
-    // Apply category filter
     if (category) {
       result = result.filter(product => product.category === category);
     }
 
-    // Apply sorting
     if (sortBy) {
       switch (sortBy) {
         case 'price-asc':

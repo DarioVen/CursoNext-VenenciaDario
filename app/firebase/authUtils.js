@@ -14,7 +14,6 @@ export const registerUser = async (email, password, isAdmin = false) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
-    // Create user document in Firestore
     await setDoc(doc(db, 'users', userCredential.user.uid), {
       email: email,
       role: isAdmin ? 'admin' : 'user',

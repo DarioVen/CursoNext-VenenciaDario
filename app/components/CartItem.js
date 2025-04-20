@@ -1,21 +1,22 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Counter from './Counter';
 import { updateCartItem, removeFromCart, getCart } from '../firebase/cartUtils';
 
 export default function CartItem({ item, userId, onUpdate }) {
+  // Verify userId is available before operations
+  const handleQuantityChange = (newQuantity) => {
+    if (newQuantity < 1 || !userId) return;
+    setTempQuantity(newQuantity);
+    setShowConfirm(true);
+  };
+
   const [loading, setLoading] = useState(false);
   const [currentQuantity, setCurrentQuantity] = useState(item.quantity);
   const [showConfirm, setShowConfirm] = useState(false);
   const [tempQuantity, setTempQuantity] = useState(item.quantity);
-
-  const handleQuantityChange = (newQuantity) => {
-    if (newQuantity < 1) return;
-    setTempQuantity(newQuantity);
-    setShowConfirm(true);
-  };
 
   const confirmQuantityChange = async () => {
     setLoading(true);

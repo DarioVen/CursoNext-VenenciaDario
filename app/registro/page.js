@@ -42,8 +42,6 @@ export default function RegisterPage() {
     try {
       const userCredential = await registerUser(formData.email, formData.password);
       
-      // Store additional user data if needed
-      // const user = userCredential.user;
       
       await Swal.fire({
         title: '¡Registro exitoso!',
@@ -58,7 +56,6 @@ export default function RegisterPage() {
       console.error('Registration error:', error);
       let errorMessage = 'Error al crear la cuenta';
       
-      // Handle specific Firebase auth errors
       switch (error.code) {
         case 'auth/email-already-in-use':
           errorMessage = 'Este email ya está registrado';
